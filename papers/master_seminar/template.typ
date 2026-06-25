@@ -9,6 +9,8 @@
   id: "",
   title-ja: "",
   title-en: "",
+  language: "ja",
+  caption-separator: [　],
   abstract: [],
   authors: (),
   affiliations: (),
@@ -19,8 +21,12 @@
   // General settings
   set document(author: authors.map(a => a.name-ja), title: title-ja)
   // Prioritize YuMincho because MS Mincho does not support bold.
-  set text(font: ("Times New Roman", "Yu Mincho", "YuMincho", "MS Mincho"), lang: "ja")
-  set page(paper: "a4", margin: (x: 23mm, y: 25mm))
+  set text(font: ("Times New Roman", "Yu Mincho", "YuMincho", "MS Mincho"), lang: language)
+  set page(
+    paper: "a4",
+    margin: (x: 23mm, y: 25mm),
+    footer: align(center)[#context counter(page).display()],
+  )
 
   // Heading settings
   set heading(numbering: "1.1.")
@@ -70,7 +76,7 @@
   }
 
   // Paragraph settings
-  show par: set block(spacing: 0.65em)
+  set par(spacing: 0.65em)
 
   // Equation settings
   set math.equation(numbering: "(1)")
@@ -78,7 +84,7 @@
   // Figure settings
   show figure.where(kind: table): set figure.caption(position: top)
   set table(stroke: .5pt)
-  set figure.caption(separator: [　])
+  set figure.caption(separator: caption-separator)
 
   // Title (Japanese).
   align(center)[#text(size: 16pt)[#id\u{3000}#title-ja]]
@@ -94,6 +100,19 @@
   v(10.5pt)
 
   v(1.2em)
+
+  if abstract != [] {
+    align(center)[
+      #block(width: 88%)[
+        #set text(size: 9pt)
+        #set par(justify: true, leading: 13pt - 9pt + 0.65pt, first-line-indent: 0em)
+        #align(center)[#text(weight: "bold")[Abstract]]
+        #align(left)[#abstract]
+      ]
+    ]
+
+    v(1.2em)
+  }
 
   // Main body.
   set text(size: 9.5pt)
