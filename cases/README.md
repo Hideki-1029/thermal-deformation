@@ -1,0 +1,144 @@
+# Analysis Case Management
+
+このディレクトリでは、TD解析からFemap解析、PythonでのLOS角度誤差解析、軽量モデル用データセット作成までに使う解析ケースを管理する。
+
+## Purpose
+
+TD解析で定義した熱環境・軌道・コンポーネント条件を、Femap解析とPython解析まで一貫して伝搬させる。
+
+解析ケースが増えても、以下を追跡できる状態にする。
+
+- どのTD条件から作られたケースか
+- どのFemap荷重セット・解析結果に対応するか
+- どのPython出力CSV・図・軽量モデル用データに対応するか
+- 学習用・検証用・汎化評価用のどのグループに属するか
+
+## Files
+
+- `case_matrix.xlsx`: 人が編集・比較するケース一覧。ケース間の差分を横並びで確認するためのマスター表。
+- `case_matrix.csv`: Pythonスクリプトが読むために `case_matrix.xlsx` から書き出すCSV。
+- `case_schema.yaml`: `case_matrix` の列名、単位、必須/任意、許容値を定義する。
+- `orbit_catalog.xlsx`: TDで使う軌道条件の一覧。既存衛星プロジェクトの軌道表を英語列名で管理する。
+- `orbit_catalog.csv`: Pythonスクリプトが読むために `orbit_catalog.xlsx` から書き出すCSV。
+
+## Basic Policy
+
+ケース設計の正本は `case_matrix.xlsx` とする。
+
+ただし、Pythonスクリプトや自動処理はExcelを直接読まず、`case_matrix.csv` を入力にする。Excelで編集したあと、CSVに書き出してから解析を実行する。
+
+`case_schema.yaml` はケース本体ではなく、列の意味と制約を定義するために使う。
+
+CSVへの書き出しは以下のスクリプトで行う。
+
+```powershell
+python scripts/export_case_inputs.py
+```
+
+個別に書き出す場合は以下を使う。
+
+```powershell
+python scripts/export_case_matrix.py
+python scripts/export_orbit_catalog.py
+```
+
+Excelで編集中の内容を反映するには、`case_matrix.xlsx` または `orbit_catalog.xlsx` を保存してから対応するスクリプトを実行する。
+
+## Case Group and Model Use
+
+`case_group` は、その解析ケースを研究上どの目的で作ったかを表す。
+
+例:
+
+- `check`: TD -> Femap -> Python の解析ルートが正しく動くかを確認する。
+- `sensitivity`: 発熱量、太陽方向、拘束条件、STT/LCT位置などの感度を見る。
+- `train`: 軽量モデルの学習データを作る。
+- `validation`: 軽量モデルの選定や調整に使う。
+- `generalization`: 学習していない熱環境・軌道・電源モードへの汎化性能を見る。
+
+`use_for_model` は、そのケースを軽量モデルのデータセットとしてどう使うかを表す。
+
+例:
+
+- `exclude`: モデル学習には使わない。動作確認や感度解析だけに使う。
+- `train`: 学習に使う。
+- `validation`: モデル選定や調整に使う。
+- `test`: 最終評価に使う。
+
+つまり、`case_group` は研究・解析上の目的、`use_for_model` は機械学習データとしての役割である。
+
+例:
+
+```text
+case_group=sensitivity, use_for_model=exclude
+```
+
+これは「感度解析用のケースだが、軽量モデルの学習・評価データには入れない」という意味になる。
+
+## Orbit Metadata
+
+軌道条件は現状TDのOrbit設定が持っているため、ケース表ではTD内の軌道設定を識別できる情報を残す。
+
+- `orbit_case`: 解析ケース間で軌道条件をグループ化するためのラベル。
+- `td_orbit_name`: Thermal Desktop内で使ったOrbitオブジェクト名または軌道設定名。
+- `orbit_source_path`: TLE、軌道暦、TD設定のエクスポートなど、TD外に軌道定義を残した場合の参照先。
+- `epoch_utc`: 軌道と太陽方向を決める基準時刻。
+
+`beta_angle_deg` は、独立に入力する熱条件というより、軌道面と太陽方向から決まる派生メタデータとして扱う。TDから直接出せない場合は空欄でもよく、後でPython側で計算または手入力する。
+
+軌道条件の詳細は `orbit_catalog.xlsx` に集約し、`case_matrix.xlsx` からは `td_orbit_name` などで参照する。軌道カタログ側は列名・値を英語に寄せ、スクリプトで扱いやすいようにする。
+
+## Case ID
+
+すべての下流成果物は `case_id` を持つ。
+
+`case_id` はTD解析でケースを作る時点で決め、Femap解析、Python解析、軽量モデル用データセットまで変更しない。
+
+例:
+
+```text
+TD001_uniform_temp_check
+TD002_linear_gradient_beta30
+TD003_lct_heat_acquisition
+```
+
+## Data Flow
+
+```text
+case_matrix.xlsx
+  -> case_matrix.csv
+  -> TD temperature output
+  -> Femap thermal deformation result
+  -> Python STT-LCT LOS angle CSV
+  -> lightweight model dataset
+  -> PAT simulation
+```
+
+## Directory Convention
+
+今後、解析データが増えてきたら以下のように分ける。
+
+```text
+data/
+  td_raw/{case_id}/
+  femap_raw/{case_id}/
+  processed/{case_id}/
+
+results/
+  {case_id}/
+    los_angles.csv
+    summary.json
+    plots/
+```
+
+現時点で既存の解析ファイルをすぐ移動する必要はない。まずは新しいケースからこの規則に寄せる。
+
+## Main Output Target
+
+軽量モデルの教師データとして主に使う量は、STT観測基準で見たLCT光軸ずれとする。
+
+- `stt_relative_los_angle_x_urad`
+- `stt_relative_los_angle_y_urad`
+- `stt_relative_los_angle_magnitude_urad`
+
+`global_los_angle_*` は診断用として残し、STT自身の回転がどの程度効いているかを確認する。

@@ -1,0 +1,151 @@
+description: >
+  Column schema for cases/case_matrix.xlsx and cases/case_matrix.csv.
+  The Excel file is the human-edited master table, and the CSV file is the
+  script-readable export.
+
+columns:
+  case_id:
+    required: true
+    unit: "-"
+    description: Unique case identifier propagated from TD to Femap and Python.
+
+  case_group:
+    required: true
+    unit: "-"
+    allowed_values:
+      - check
+      - train
+      - validation
+      - generalization
+      - sensitivity
+    description: High-level purpose of the case.
+
+  use_for_model:
+    required: true
+    unit: "-"
+    allowed_values:
+      - exclude
+      - train
+      - validation
+      - test
+    description: Role of this case in lightweight model development.
+
+  thermal_case:
+    required: true
+    unit: "-"
+    description: Thermal environment label such as uniform, linear_gradient, local_heat, or orbital.
+
+  orbit_case:
+    required: false
+    unit: "-"
+    description: Orbit condition label used to group related TD orbit settings.
+
+  td_orbit_name:
+    required: false
+    unit: "-"
+    description: Orbit object or orbit definition name used inside Thermal Desktop.
+
+  orbit_source_path:
+    required: false
+    unit: "-"
+    description: Path to the source orbit definition if it exists outside the TD model, such as TLE, ephemeris, or exported orbit settings.
+
+  epoch_utc:
+    required: false
+    unit: UTC
+    description: Reference epoch for the orbit and Sun geometry.
+
+  beta_angle_deg:
+    required: false
+    unit: deg
+    description: Orbit-Sun geometry metadata derived from the orbit plane and Sun vector when available.
+
+  sun_direction_body:
+    required: false
+    unit: "-"
+    description: Sun direction in the spacecraft body frame, such as PX, MX, PY, MY, PZ, or MZ.
+
+  duration_s:
+    required: false
+    unit: s
+    description: TD/Femap time span represented by the case.
+
+  sample_interval_s:
+    required: false
+    unit: s
+    description: Time interval between exported thermal/deformation samples.
+
+  power_mode:
+    required: false
+    unit: "-"
+    allowed_values:
+      - standby
+      - acquisition
+      - communication
+      - custom
+    description: Spacecraft or payload operation mode.
+
+  lct_heat_w:
+    required: false
+    unit: W
+    description: LCT internal heat load.
+
+  stt_heat_w:
+    required: false
+    unit: W
+    description: STT internal heat load.
+
+  pcdu_heat_w:
+    required: false
+    unit: W
+    description: PCDU internal heat load.
+
+  stt_location:
+    required: false
+    unit: "-"
+    description: STT mounting location label.
+
+  lct_location:
+    required: false
+    unit: "-"
+    description: LCT mounting location label.
+
+  constraint_set:
+    required: false
+    unit: "-"
+    description: Femap boundary condition or 3-2-1 constraint label.
+
+  td_output_path:
+    required: false
+    unit: "-"
+    description: Path to Thermal Desktop output used by Femap.
+
+  femap_model_path:
+    required: false
+    unit: "-"
+    description: Path to Femap model file used for the case.
+
+  femap_result_path:
+    required: false
+    unit: "-"
+    description: Path to exported Femap deformation result.
+
+  femap_loadset_start:
+    required: false
+    unit: "-"
+    description: First Femap load set or case index corresponding to this case.
+
+  femap_loadset_end:
+    required: false
+    unit: "-"
+    description: Last Femap load set or case index corresponding to this case.
+
+  python_result_path:
+    required: false
+    unit: "-"
+    description: Path to processed STT-LCT LOS angle CSV.
+
+  notes:
+    required: false
+    unit: "-"
+    description: Free-form notes for assumptions, manual steps, or known issues.

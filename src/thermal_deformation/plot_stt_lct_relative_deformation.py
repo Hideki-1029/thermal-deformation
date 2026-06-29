@@ -9,9 +9,10 @@ import pandas as pd
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parents[1]
 DEFAULT_INPUT = SCRIPT_DIR / "data_femap_deformation" / "260629_1505_translation_rotation.xlsx"
 DEFAULT_CONFIG = SCRIPT_DIR / "data_femap_deformation" / "stt_lct_node_config.json"
-DEFAULT_OUTPUT_DIR = SCRIPT_DIR.parents[1] / "results" / "femap_deformation"
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "results" / "femap_deformation"
 
 TRANSLATION_COMPONENTS = {
     "x": ("T1", "2"),
@@ -23,6 +24,35 @@ ROTATION_COMPONENTS = {
     "y": ("R2", "7"),
     "z": ("R3", "8"),
 }
+
+CASE_EXPORT_PAIRS = (
+    (
+        REPO_ROOT / "cases" / "case_matrix.xlsx",
+        REPO_ROOT / "cases" / "case_matrix.csv",
+    ),
+    (
+        REPO_ROOT / "cases" / "orbit_catalog.xlsx",
+        REPO_ROOT / "cases" / "orbit_catalog.csv",
+    ),
+)
+
+
+def warn_if_case_exports_stale():
+    stale_pairs = []
+    for xlsx_path, csv_path in CASE_EXPORT_PAIRS:
+        if not xlsx_path.exists():
+            continue
+        if not csv_path.exists() or xlsx_path.stat().st_mtime > csv_path.stat().st_mtime:
+            stale_pairs.append((xlsx_path, csv_path))
+
+    if not stale_pairs:
+        return
+
+    print("WARNING: Case input CSV may be stale.")
+    for xlsx_path, csv_path in stale_pairs:
+        print(f"  {xlsx_path.relative_to(REPO_ROOT)} is newer than {csv_path.relative_to(REPO_ROOT)}")
+    print("  Save the Excel files, then run: python scripts/export_case_inputs.py")
+    print()
 
 
 def load_config(config_path):
@@ -550,6 +580,7 @@ def parse_args():
 
 def main():
     args = parse_args()
+    warn_if_case_exports_stale()
     config = load_config(args.config)
     df = pd.read_excel(args.input, sheet_name=args.sheet)
 
