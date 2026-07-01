@@ -150,13 +150,13 @@ SPIE が提供しているテンプレート:
 
 現時点では SPIE 公式の Typst テンプレートは見当たらない。
 
-このPCに LaTeX 実行環境がない場合、最も安全なのは以下の運用にする。
+このPCに LaTeX 実行環境がないため、以下の方針で進める。
 
-1. `papers/ICSO/main.typ` は日本語の構成検討・本文下書き用に使う。
-2. 図表、数式、章立て、主張、参考文献を Typst 側で先に固める。
-3. ICSO/SPIE の公式 Word A4 template を入手したら、本文を Word テンプレートへ移植する。
-4. 最終PDFは Word から出力する。
-5. PDF出力後に、フォント埋め込み、余白、ページ数、header/footerなしを確認する。
+1. `papers/ICSO/template.typ` に、SPIE A4 sample PDF / Word template の主要条件を反映した簡易Typstテンプレートを置く。
+2. `papers/ICSO/main.typ` は、このSPIE風Typstテンプレートで日本語の構成検討・本文下書きに使う。
+3. 図表、数式、章立て、主張、参考文献を Typst 側で先に固める。
+4. 最終提出前にSPIE A4 sample PDFと見比べ、余白、1カラム、title/authors/abstract/keywords/section heading、header/footerなしを確認する。
+5. フォーマット面で不安が残る場合は、本文をSPIE Word A4 templateへ移植して最終PDFを作る。
 
 LaTeXを使いたい場合の選択肢:
 
@@ -168,8 +168,8 @@ LaTeXを使いたい場合の選択肢:
 
 現実的な推奨:
 
-- 研究内容の作成・日本語下書き: Typst / Markdown
+- 研究内容の作成・日本語下書き: SPIE風Typst / Markdown
 - 図表生成: Python
-- 最終投稿版の整形: SPIE Word A4 template
+- 最終投稿版の整形: まずSPIE風TypstでPDF化し、必要ならSPIE Word A4 templateへ退避
 
-この方針なら、LaTeX環境がなくても公式フォーマットに合わせやすく、提出直前の環境トラブルを避けやすい。
+この方針なら、LaTeX環境がなくてもTypstで研究内容を進められる。最終的なフォーマット安全性は、SPIE sample PDFとの目視比較と、必要に応じたWord template移植で担保する。

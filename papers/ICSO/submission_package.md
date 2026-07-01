@@ -3,6 +3,7 @@
 ## 現在のファイル
 
 - 仮原稿ソース: `papers/ICSO/main.typ`
+- SPIE風Typstテンプレート: `papers/ICSO/template.typ`
 - 仮PDF: `papers/ICSO/main.pdf`
 - 図フォルダ: `papers/ICSO/figure/`
 - 結果要約:
@@ -11,9 +12,11 @@
 
 ## 注意
 
-現在の `main.typ` は、ICSO公式テンプレートが来るまでの仮原稿である。
+現在の `main.typ` は、SPIE A4 sample PDF / Word template の主要条件を参考にしたTypst原稿である。
 
-公式テンプレートを入手したら、本文内容をそちらへ移す。現時点では、英語完成稿ではなく、日本語で研究内容・章立て・結果の流れを固めるための作業ファイルとして扱う。
+ただし、SPIE公式のTypstテンプレートではないため、最終提出前には公式Word/PDF sampleと見比べる。フォーマット面で不安が残る場合は、本文をSPIE Word A4 templateへ移植して最終PDFを作る。
+
+現時点では、英語完成稿ではなく、日本語で研究内容・章立て・結果の流れを固めるための作業ファイルとして扱う。
 
 ## ビルド手順
 
@@ -23,7 +26,7 @@
 python scripts/generate_icso_results.py
 ```
 
-仮PDFを作る。
+SPIE風Typst PDFを作る。
 
 ```powershell
 typst compile --root . papers/ICSO/main.typ papers/ICSO/main.pdf
@@ -56,7 +59,9 @@ Keywords:
 
 ## 最終提出前チェック
 
-- ICSO公式テンプレートへ移植した。
+- SPIE A4 sample PDFと見比べて、余白・1カラム・title/authors/abstract/keywords/section headingの体裁を確認した。
+- header / footer / page number が入っていないことを確認した。
+- フォーマットに不安がある場合は、SPIE Word A4 templateへ移植した。
 - 著者順と所属を確認した。
 - ページ数、ファイルサイズ、参考文献形式を確認した。
 - 図表番号と本文参照が一致している。
