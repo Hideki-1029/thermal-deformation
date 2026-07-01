@@ -23,6 +23,7 @@ ICSO full paper の初期草稿を作成しました。
 - 現在の解析成熟度に対して、主張の強さが適切か。
 - TD/Femap 代表ケースと少数感度解析という見せ方で十分か。
 - 軽量モデルと PAT シミュレータの接続を主成果として置いてよいか。
+- 軌道予測誤差も粗捕捉時の初期指向誤差に含めて考えるべき、という観点を本文・評価指標に反映できているか。
 - 著者順・貢献の書き方に問題がないか。
 - ICSO 提出前に弱めるべき表現、追加すべき解析、削るべき内容があるか。
 
@@ -41,18 +42,23 @@ ICSO full paper の初期草稿を作成しました。
    - シミュレーションを変えたら `python scripts/generate_icso_results.py` を再実行する。
    - PDF は `typst compile --root . papers/ICSO/main.typ papers/ICSO/main.pdf` で再ビルドする。
 
-3. 図の品質
+3. 軌道予測誤差の扱い
+   - 粗捕捉時の初期指向誤差には、熱変形 LOS バイアスだけでなく軌道予測誤差も含まれることを明記する。
+   - PAT シミュレータでは、熱 LOS 誤差に軌道予測誤差を加えた場合の scan center 残差・捕捉時間も確認する。
+   - 軌道予測誤差の大きさを固定値で置くか、TLE/GNSS 系の軌道データから算出するかを決める。
+
+4. 図の品質
    - 2カラムで読める軸ラベル、単位、凡例になっているか確認する。
    - 仮図、低解像度図、英語表記が揺れている図は差し替える。
 
-4. 用語の統一
+5. 用語の統一
    - STT-relative LOS
    - feedforward correction
    - adaptive correction
    - coarse acquisition
    - physical lightweight model
 
-5. 投稿フォーマット
+6. 投稿フォーマット
    - ICSO 公式テンプレートに差し替える。
    - ページ数、図表、参考文献形式、著者所属を確認する。
    - 投稿フォームに必要な title、abstract、keywords を確認する。
