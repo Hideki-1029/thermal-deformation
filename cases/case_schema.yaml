@@ -75,6 +75,31 @@ columns:
     unit: s
     description: Time interval between exported thermal/deformation samples.
 
+  orbit_period_s:
+    required: false
+    unit: s
+    description: Orbital period used to derive orbital phase and repeated eclipse events.
+
+  eclipse_entry_time_s:
+    required: false
+    unit: s
+    description: Elapsed time from case start to eclipse entry for the reference orbit cycle.
+
+  eclipse_exit_time_s:
+    required: false
+    unit: s
+    description: Elapsed time from case start to eclipse exit for the reference orbit cycle.
+
+  eclipse_duration_s:
+    required: false
+    unit: s
+    description: Duration of one eclipse interval in the reference orbit cycle.
+
+  sunlit_duration_s:
+    required: false
+    unit: s
+    description: Duration of the sunlit interval in the reference orbit cycle.
+
   power_mode:
     required: false
     unit: "-"

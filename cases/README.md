@@ -86,6 +86,16 @@ case_group=sensitivity, use_for_model=exclude
 
 `beta_angle_deg` は、独立に入力する熱条件というより、軌道面と太陽方向から決まる派生メタデータとして扱う。TDから直接出せない場合は空欄でもよく、後でPython側で計算または手入力する。
 
+軽量モデルで日照/蝕遷移を扱うため、軌道イベントは秒単位で残す。
+
+- `orbit_period_s`: 軌道周期。軌道位相や複数周回のイベント展開に使う。
+- `eclipse_entry_time_s`: ケース開始から見た代表周回の蝕入り時刻。
+- `eclipse_exit_time_s`: ケース開始から見た代表周回の蝕明け時刻。
+- `eclipse_duration_s`: 代表周回の蝕継続時間。
+- `sunlit_duration_s`: 代表周回の日照継続時間。
+
+Femapのケース番号は `sample_interval_s` と `femap_loadset_start` から時刻に戻せるため、蝕入り/蝕明けはケース番号ではなく時刻で管理する。
+
 軌道条件の詳細は `orbit_catalog.xlsx` に集約し、`case_matrix.xlsx` からは `td_orbit_name` などで参照する。軌道カタログ側は列名・値を英語に寄せ、スクリプトで扱いやすいようにする。
 
 ## Case ID
