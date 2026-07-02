@@ -11,9 +11,9 @@ ICSOに向けては研究を前に進める必要がある。
 
 フォルダの構成
 docs/      研究メモ・文献管理
+inputs/    解析に使う入力データ
 src/       再利用する研究コード本体
 scripts/   実行用スクリプト
-data/      入力データ
 results/   解析結果・図・表
 papers/    修士輪講会・ICSOなどの予稿
 shared/    Typstテンプレート・共通図・共通bib
@@ -22,6 +22,10 @@ src/ と scripts/ の使い分け：
 src/ には、LOS角度計算、軽量モデル、PATシミュレータなど、他の解析から再利用するモデル本体や関数群を置く。
 scripts/ には、ケース表の書き出し、解析の一括実行、論文用の図表生成など、コマンドとして実行する作業用スクリプトを置く。
 つまり、src/ は「部品」、scripts/ は「作業手順」として分ける。
+
+inputs/ の位置づけ：
+解析で使うINPUTデータを集約する場所。たとえば `inputs/data_femap_deformation/` には、Femapから出力した熱変形結果のExcelファイルや、STT/LCT代表節点の設定ファイルを置く。
+src/ や scripts/ は、基本的にこの inputs/ 以下のデータを読み込んで results/ 以下に解析結果を出力する。
 
 
 cursorの特徴

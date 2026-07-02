@@ -10,8 +10,9 @@ import pandas as pd
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
-DEFAULT_INPUT = SCRIPT_DIR / "data_femap_deformation" / "260629_1505_translation_rotation.xlsx"
-DEFAULT_CONFIG = SCRIPT_DIR / "data_femap_deformation" / "stt_lct_node_config.json"
+DEFAULT_INPUT_DIR = REPO_ROOT / "inputs" / "data_femap_deformation"
+DEFAULT_INPUT = DEFAULT_INPUT_DIR / "260629_1505_translation_rotation.xlsx"
+DEFAULT_CONFIG = DEFAULT_INPUT_DIR / "stt_lct_node_config.json"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "results" / "femap_deformation"
 
 TRANSLATION_COMPONENTS = {
@@ -24,35 +25,6 @@ ROTATION_COMPONENTS = {
     "y": ("R2", "7"),
     "z": ("R3", "8"),
 }
-
-CASE_EXPORT_PAIRS = (
-    (
-        REPO_ROOT / "cases" / "case_matrix.xlsx",
-        REPO_ROOT / "cases" / "case_matrix.csv",
-    ),
-    (
-        REPO_ROOT / "cases" / "orbit_catalog.xlsx",
-        REPO_ROOT / "cases" / "orbit_catalog.csv",
-    ),
-)
-
-
-def warn_if_case_exports_stale():
-    stale_pairs = []
-    for xlsx_path, csv_path in CASE_EXPORT_PAIRS:
-        if not xlsx_path.exists():
-            continue
-        if not csv_path.exists() or xlsx_path.stat().st_mtime > csv_path.stat().st_mtime:
-            stale_pairs.append((xlsx_path, csv_path))
-
-    if not stale_pairs:
-        return
-
-    print("WARNING: Case input CSV may be stale.")
-    for xlsx_path, csv_path in stale_pairs:
-        print(f"  {xlsx_path.relative_to(REPO_ROOT)} is newer than {csv_path.relative_to(REPO_ROOT)}")
-    print("  Save the Excel files, then run: python scripts/export_case_inputs.py")
-    print()
 
 
 def load_config(config_path):
@@ -236,9 +208,14 @@ def compute_relative_motion(df, config):
     lct_rotation_change = lct_axis_unit - nominal_axis[None, :]
     relative_rotation_change = relative_axis_unit - nominal_axis[None, :]
 
-    # Small-angle bookkeeping in two reference definitions.
-    # global_los: LCT optical-axis deviation in the undeformed/global frame.
-    # stt_relative_los: LCT optical-axis deviation observed in the STT local frame.
+    # PAT/far-field LOS is the outgoing LCT optical-axis deviation observed
+    # in the STT-defined attitude frame. Translation of the LCT point is not
+    # added here because far-field parallax scales with target range, not with
+    # the internal STT-LCT baseline.
+    far_field_los_change = relative_rotation_change
+
+    # Bookkeeping definitions retained for angle-budget diagnostics.
+    # These combine the internal STT-LCT centerline tilt with rotation terms.
     global_los_unit = normalize_rows(
         nominal_axis[None, :] + centerline_change + lct_rotation_change
     )
@@ -276,7 +253,9 @@ def compute_relative_motion(df, config):
             "centerline_angle_x_urad": centerline_change[:, 0] * 1e6,
             "centerline_angle_y_urad": centerline_change[:, 1] * 1e6,
             "centerline_angle_z_urad": centerline_change[:, 2] * 1e6,
-            "centerline_angle_magnitude_urad": vector_angle_magnitude_urad(centerline_change),
+            "centerline_angle_magnitude_urad": vector_angle_magnitude_urad(
+                centerline_change
+            ),
             "stt_rotation_angle_x_urad": stt_rotation_change[:, 0] * 1e6,
             "stt_rotation_angle_y_urad": stt_rotation_change[:, 1] * 1e6,
             "stt_rotation_angle_z_urad": stt_rotation_change[:, 2] * 1e6,
@@ -294,6 +273,12 @@ def compute_relative_motion(df, config):
             "relative_rotation_angle_z_urad": relative_rotation_change[:, 2] * 1e6,
             "relative_rotation_angle_magnitude_urad": vector_angle_magnitude_urad(
                 relative_rotation_change
+            ),
+            "far_field_los_angle_x_urad": far_field_los_change[:, 0] * 1e6,
+            "far_field_los_angle_y_urad": far_field_los_change[:, 1] * 1e6,
+            "far_field_los_angle_z_urad": far_field_los_change[:, 2] * 1e6,
+            "far_field_los_angle_magnitude_urad": vector_angle_magnitude_urad(
+                far_field_los_change
             ),
             "global_los_angle_x_urad": global_los_change[:, 0] * 1e6,
             "global_los_angle_y_urad": global_los_change[:, 1] * 1e6,
@@ -357,12 +342,17 @@ def plot_relative_motion(result, metadata, output_png, show=False):
     axes[2].plot(x, result["centerline_angle_magnitude_urad"], label="centerline tilt")
     axes[2].plot(x, result["stt_rotation_angle_magnitude_urad"], label="STT axis rotation")
     axes[2].plot(x, result["lct_rotation_angle_magnitude_urad"], label="LCT axis rotation")
-    axes[2].plot(x, result["global_los_angle_magnitude_urad"], label="global LOS")
+    axes[2].plot(
+        x,
+        result["far_field_los_angle_magnitude_urad"],
+        linewidth=2,
+        label="far-field PAT LOS",
+    )
     axes[2].plot(
         x,
         result["stt_relative_los_angle_magnitude_urad"],
-        linewidth=2,
-        label="STT-relative LOS",
+        "--",
+        label="centerline + relative rotation",
     )
     axes[2].set_xlabel(metadata["case_label"])
     axes[2].set_ylabel("angle magnitude [urad]")
@@ -372,6 +362,50 @@ def plot_relative_motion(result, metadata, output_png, show=False):
     axes[2].grid(True)
     axes[2].legend()
 
+    fig.tight_layout()
+    fig.savefig(output_png, dpi=200)
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def plot_far_field_los_budget(result, metadata, output_png, show=False):
+    x = result["case_index"].to_numpy()
+    fig, axes = plt.subplots(2, 1, figsize=(11, 8), sharex=True)
+
+    for axis_name, ax in zip(("x", "y"), axes):
+        ax.plot(
+            x,
+            result[f"centerline_angle_{axis_name}_urad"],
+            ":",
+            label=f"centerline {axis_name} (aux)",
+        )
+        ax.plot(
+            x,
+            result[f"stt_rotation_angle_{axis_name}_urad"],
+            "--",
+            label=f"STT rotation {axis_name}",
+        )
+        ax.plot(
+            x,
+            result[f"lct_rotation_angle_{axis_name}_urad"],
+            "--",
+            label=f"LCT rotation {axis_name}",
+        )
+        ax.plot(
+            x,
+            result[f"far_field_los_angle_{axis_name}_urad"],
+            linewidth=2,
+            label=f"far-field PAT LOS {axis_name}",
+        )
+        ax.set_ylabel(f"{axis_name} angle [urad]")
+        ax.grid(True)
+        ax.legend()
+
+    axes[0].set_title("Far-field PAT LOS angle budget by component")
+    axes[1].set_xlabel(metadata["case_label"])
     fig.tight_layout()
     fig.savefig(output_png, dpi=200)
 
@@ -439,31 +473,74 @@ def plot_los_definition_comparison(result, metadata, output_png, show=False):
     x = result["case_index"].to_numpy()
     fig, axes = plt.subplots(3, 1, figsize=(11, 10), sharex=True)
 
-    axes[0].plot(x, result["global_los_angle_x_urad"], label="global x")
-    axes[0].plot(x, result["stt_relative_los_angle_x_urad"], label="STT-relative x")
+    axes[0].plot(
+        x,
+        result["far_field_los_angle_x_urad"],
+        linewidth=2,
+        label="far-field PAT x",
+    )
+    axes[0].plot(
+        x,
+        result["stt_relative_los_angle_x_urad"],
+        "--",
+        label="centerline + relative rotation x",
+    )
+    axes[0].plot(
+        x,
+        result["global_los_angle_x_urad"],
+        ":",
+        label="global bookkeeping x",
+    )
     axes[0].set_ylabel("x angle [urad]")
     axes[0].grid(True)
     axes[0].legend()
 
-    axes[1].plot(x, result["global_los_angle_y_urad"], label="global y")
-    axes[1].plot(x, result["stt_relative_los_angle_y_urad"], label="STT-relative y")
+    axes[1].plot(
+        x,
+        result["far_field_los_angle_y_urad"],
+        linewidth=2,
+        label="far-field PAT y",
+    )
+    axes[1].plot(
+        x,
+        result["stt_relative_los_angle_y_urad"],
+        "--",
+        label="centerline + relative rotation y",
+    )
+    axes[1].plot(
+        x,
+        result["global_los_angle_y_urad"],
+        ":",
+        label="global bookkeeping y",
+    )
     axes[1].set_ylabel("y angle [urad]")
     axes[1].grid(True)
     axes[1].legend()
 
-    axes[2].plot(x, result["global_los_angle_magnitude_urad"], label="global magnitude")
+    axes[2].plot(
+        x,
+        result["far_field_los_angle_magnitude_urad"],
+        linewidth=2,
+        label="far-field PAT magnitude",
+    )
     axes[2].plot(
         x,
         result["stt_relative_los_angle_magnitude_urad"],
-        linewidth=2,
-        label="STT-relative magnitude",
+        "--",
+        label="centerline + relative rotation magnitude",
+    )
+    axes[2].plot(
+        x,
+        result["global_los_angle_magnitude_urad"],
+        ":",
+        label="global bookkeeping magnitude",
     )
     axes[2].set_xlabel(metadata["case_label"])
     axes[2].set_ylabel("angle magnitude [urad]")
     axes[2].grid(True)
     axes[2].legend()
 
-    axes[0].set_title("Global LOS vs STT-relative LOS")
+    axes[0].set_title("Far-field PAT LOS vs bookkeeping LOS definitions")
     fig.tight_layout()
     fig.savefig(output_png, dpi=200)
 
@@ -488,7 +565,7 @@ def make_plane(center, normal, size=0.18):
 
 
 def plot_plane_sketch(result, metadata, output_png, show=False, exaggeration=250.0):
-    idx = int(result["stt_relative_los_angle_magnitude_urad"].idxmax())
+    idx = int(result["far_field_los_angle_magnitude_urad"].idxmax())
     case_index = result.loc[idx, "case_index"]
 
     stt_center = metadata["from_position"]
@@ -527,7 +604,9 @@ def plot_plane_sketch(result, metadata, output_png, show=False, exaggeration=250
         normalize=True,
     )
 
-    all_points = np.vstack([stt_plane, lct_plane, stt_center[None, :], lct_center_deformed[None, :]])
+    all_points = np.vstack(
+        [stt_plane, lct_plane, stt_center[None, :], lct_center_deformed[None, :]]
+    )
     center = all_points.mean(axis=0)
     span = np.max(np.ptp(all_points, axis=0))
     for setter, value in zip(
@@ -562,7 +641,10 @@ def parse_sheet_name(value):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Plot STT-LCT relative displacement, rotation, and LOS angle from Femap Excel."
+        description=(
+            "Plot STT-LCT relative displacement, rotation, and far-field PAT LOS "
+            "angle from Femap Excel."
+        )
     )
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -580,7 +662,6 @@ def parse_args():
 
 def main():
     args = parse_args()
-    warn_if_case_exports_stale()
     config = load_config(args.config)
     df = pd.read_excel(args.input, sheet_name=args.sheet)
 
@@ -588,15 +669,29 @@ def main():
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stem = args.input.stem
-    output_csv = args.output_dir / f"{stem}_stt_lct_los_angles.csv"
-    output_overview_png = args.output_dir / f"{stem}_stt_lct_motion_overview.png"
-    output_global_budget_png = args.output_dir / f"{stem}_global_los_angle_budget.png"
-    output_stt_budget_png = args.output_dir / f"{stem}_stt_relative_los_angle_budget.png"
-    output_comparison_png = args.output_dir / f"{stem}_los_definition_comparison.png"
-    output_plane_png = args.output_dir / f"{stem}_stt_lct_plane_sketch.png"
+    detail_output_dir = args.output_dir / stem
+    detail_output_dir.mkdir(parents=True, exist_ok=True)
+
+    output_csv = detail_output_dir / f"{stem}_stt_lct_los_angles.csv"
+    output_overview_png = detail_output_dir / f"{stem}_stt_lct_motion_overview.png"
+    output_global_budget_png = detail_output_dir / f"{stem}_global_los_angle_budget.png"
+    output_far_field_budget_png = (
+        args.output_dir / f"{stem}_far_field_los_angle_budget.png"
+    )
+    output_stt_budget_png = detail_output_dir / (
+        f"{stem}_stt_relative_los_angle_budget.png"
+    )
+    output_comparison_png = detail_output_dir / f"{stem}_los_definition_comparison.png"
+    output_plane_png = detail_output_dir / f"{stem}_stt_lct_plane_sketch.png"
 
     result.to_csv(output_csv, index=False)
     plot_relative_motion(result, metadata, output_overview_png, show=args.show)
+    plot_far_field_los_budget(
+        result,
+        metadata,
+        output_far_field_budget_png,
+        show=args.show,
+    )
     plot_angle_budget(
         result,
         metadata,
@@ -610,7 +705,7 @@ def main():
         metadata,
         output_stt_budget_png,
         los_prefix="stt_relative_los",
-        los_label="STT-relative LOS",
+        los_label="STT-relative LOS bookkeeping",
         show=args.show,
     )
     plot_los_definition_comparison(
@@ -637,8 +732,9 @@ def main():
     print(f"Rotation columns     : {'yes' if metadata['has_rotation'] else 'no'}")
     print(f"Output CSV           : {output_csv}")
     print(f"Overview PNG         : {output_overview_png}")
+    print(f"Far-field budget PNG : {output_far_field_budget_png}")
     print(f"Global budget PNG    : {output_global_budget_png}")
-    print(f"STT budget PNG       : {output_stt_budget_png}")
+    print(f"STT bookkeeping PNG  : {output_stt_budget_png}")
     print(f"Comparison PNG       : {output_comparison_png}")
     print(f"Plane sketch PNG     : {output_plane_png}")
     print()
@@ -647,6 +743,7 @@ def main():
         "stt_rotation_angle_magnitude_urad",
         "lct_rotation_angle_magnitude_urad",
         "relative_rotation_angle_magnitude_urad",
+        "far_field_los_angle_magnitude_urad",
         "global_los_angle_magnitude_urad",
         "stt_relative_los_angle_magnitude_urad",
     ]

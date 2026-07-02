@@ -1,7 +1,6 @@
 description: >
-  Column schema for cases/case_matrix.xlsx and cases/case_matrix.csv.
-  The Excel file is the human-edited master table, and the CSV file is the
-  script-readable export.
+  Column schema for cases/case_matrix.xlsx. The Excel file is the
+  human-edited master table and the default input for Python scripts.
 
 columns:
   case_id:

@@ -16,33 +16,18 @@ TD解析で定義した熱環境・軌道・コンポーネント条件を、Fem
 ## Files
 
 - `case_matrix.xlsx`: 人が編集・比較するケース一覧。ケース間の差分を横並びで確認するためのマスター表。
-- `case_matrix.csv`: Pythonスクリプトが読むために `case_matrix.xlsx` から書き出すCSV。
 - `case_schema.yaml`: `case_matrix` の列名、単位、必須/任意、許容値を定義する。
 - `orbit_catalog.xlsx`: TDで使う軌道条件の一覧。既存衛星プロジェクトの軌道表を英語列名で管理する。
-- `orbit_catalog.csv`: Pythonスクリプトが読むために `orbit_catalog.xlsx` から書き出すCSV。
 
 ## Basic Policy
 
-ケース設計の正本は `case_matrix.xlsx` とする。
+ケース設計の正本は `case_matrix.xlsx` とし、軌道条件の正本は `orbit_catalog.xlsx` とする。
 
-ただし、Pythonスクリプトや自動処理はExcelを直接読まず、`case_matrix.csv` を入力にする。Excelで編集したあと、CSVに書き出してから解析を実行する。
+Pythonスクリプトや自動処理も、原則としてこの2つのExcelファイルを直接読み込む。Excelで編集した内容を解析に反映するには、Excelファイルを保存してから解析スクリプトを実行する。
 
 `case_schema.yaml` はケース本体ではなく、列の意味と制約を定義するために使う。
 
-CSVへの書き出しは以下のスクリプトで行う。
-
-```powershell
-python scripts/export_case_inputs.py
-```
-
-個別に書き出す場合は以下を使う。
-
-```powershell
-python scripts/export_case_matrix.py
-python scripts/export_orbit_catalog.py
-```
-
-Excelで編集中の内容を反映するには、`case_matrix.xlsx` または `orbit_catalog.xlsx` を保存してから対応するスクリプトを実行する。
+CSVが必要な場合は、確認用・共有用の派生物として必要なタイミングで書き出す。解析運用の必須手順にはしない。
 
 ## Case Group and Model Use
 
@@ -116,7 +101,6 @@ TD003_lct_heat_acquisition
 
 ```text
 case_matrix.xlsx
-  -> case_matrix.csv
   -> TD temperature output
   -> Femap thermal deformation result
   -> Python STT-LCT LOS angle CSV
